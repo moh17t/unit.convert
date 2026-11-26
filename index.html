@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Engineering unit converter for petrochemical units.">
+  <title>Petrochemical Unit Converter</title>
+  <style>
+    :root {
+      --ink: #14231d;
+      --muted: #66766f;
+      --line: #dce5df;
+      --accent: #0b6b52;
+      --accent-soft: #eef6f2;
+      --canvas: #edf2ee;
+      --card: #fff;
+      --shadow: 0 40px 80px -40px rgba(20, 35, 29, 0.38), 0 1px 2px rgba(20, 35, 29, 0.04);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { color-scheme: light; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px 16px;
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 500px at 10% 0%, rgba(11, 107, 82, 0.14), transparent 60%),
+        radial-gradient(700px 500px at 100% 100%, rgba(209, 122, 63, 0.08), transparent 55%),
+        linear-gradient(rgba(20, 35, 29, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(20, 35, 29, 0.045) 1px, transparent 1px),
+        var(--canvas);
+      background-size: auto, auto, 28px 28px, 28px 28px, auto;
+    }
+
+    .app {
+      width: min(100%, 720px);
+      background: var(--card);
+      border: 1px solid rgba(20, 35, 29, 0.1);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .app::before {
+      content: "";
+      display: block;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), #8bc9ad 55%, #e6b98f);
+    }
+
+    .header {
+      padding: 24px 24px 12px;
+      text-align: center;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      color: #fff;
+      font-size: 13px;
+      background: var(--accent);
+      border-radius: 7px;
+      box-shadow: 0 3px 8px rgba(11, 107, 82, 0.25);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4.5vw, 36px);
+      font-weight: 650;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .converter {
+      padding: 16px 20px 20px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    @media (max-width: 520px) {
+      .field-row { grid-template-columns: 1fr; }
+    }
+
+    .unit-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    .select-wrapper::after {
+      content: "";
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid var(--muted);
+      border-bottom: 1.5px solid var(--muted);
+      transform: translateY(-60%) rotate(45deg);
+      pointer-events: none;
+    }
+
+    .unit-select {
+      width: 100%;
+      height: 44px;
+      padding: 0 36px 0 12px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      background: #f7faf8;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    .unit-select:hover { border-color: #c8d8d0; }
+    .unit-select:focus {
+      background: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(11, 107, 82, 0.12);
+    }
+
+    .unit-select optgroup {
+      font-weight: 700;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .unit-select option {
+      font-weight: 500;
+      font-size: 13.5px;
+      padding: 6px 8px;
+    }
+
+    .swap-btn {
+      align-self: end;
+      margin-bottom: 2px;
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      background: var(--ink);
+      color: #fff;
+      border: 1px solid #0f2f26;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px -4px rgba(20, 35, 29, 0.35);
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+
+    .swap-btn:hover {
+      background: var(--accent);
+      box-shadow: 0 6px 16px -5px rgba(11, 107, 82, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .swap-btn:active { transform: translateY(0) scale(0.95); }
+    .swap-btn:focus-visible {
+      outline: 3px solid rgba(11, 107, 82, 0.25);
+      outline-offset: 2px;
+    }
+
+    .swap-btn svg { width: 17px; height: 17px; }
+
+    @media (max-width: 520px) {
+      .swap-btn {
+        align-self: center;
+        margin: 0 auto;
+        transform: rotate(90deg);
+      }
+      .swap-btn:hover { transform: rotate(90deg) scale(1.04); }
+    }
+
+    .value-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .value-input {
+      flex: 1;
+      height: 60px;
+      padding: 8px 0 0;
+      font-family: inherit;
+      font-size: clamp(28px, 4.5vw, 36px);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid var(--line);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .value-input:focus { border-bottom-color: var(--accent); }
+    .value-input::placeholder { color: #9aaba3; font-weight: 500; }
+    .value-input::-webkit-outer-spin-button,
+    .value-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .value-input { -moz-appearance: textfield; }
+
+    .result-box {
+      flex: 1;
+      min-width: 0;
+      height: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: stretch;
+      background: var(--accent-soft);
+      border: 1px solid #d2e6dc;
+      border-radius: 12px;
+      padding: 0 14px 10px;
+    }
+
+    .result-value {
+      font-size: clamp(28px, 4.5vw, 36px);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+      color: var(--accent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result-value.empty { color: #9aaba3; }
+
+    .result-unit {
+      font-size: 11.5px;
+      font-weight: 650;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Extra input fields (conditional) */
+    .extra-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--line);
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .extra-fields.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .extra-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .extra-field .field-label { font-size: 9.5px; }
+
+    .extra-input {
+      height: 40px;
+      padding: 0 10px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      background: #f7faf8;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    .extra-input:focus {
+      background: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(11, 107, 82, 0.12);
+    }
+
+    .meta {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 10.5px;
+    }
+
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 5px;
+      height: 5px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(11, 107, 82, 0.12);
+    }
+
+    @media (max-width: 520px) {
+      .app { border-radius: 18px; }
+      .header { padding: 20px 16px 8px; }
+      .converter { padding: 12px 16px 16px; }
+      h1 { font-size: clamp(24px, 7vw, 32px); }
+      .value-row { flex-direction: column; gap: 10px; }
+      .result-box { height: 56px; }
+    }
+
+    /* ---------- Searchable unit picker (interface only) ---------- */
+    /* The card must not clip the popover menu. */
+    .app { overflow: visible; }
+    .app::before { border-radius: 22px 22px 0 0; }
+
+    .field-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+    .search-select { position: relative; }
+
+    .unit-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      height: 44px;
+      padding: 0 12px;
+      font: inherit;
+      color: var(--ink);
+      text-align: left;
+      background: #f7faf8;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    .unit-trigger:hover { border-color: #c8d8d0; }
+
+    .unit-trigger:focus-visible,
+    .unit-trigger[aria-expanded="true"] {
+      background: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(11, 107, 82, 0.12);
+      outline: none;
+    }
+
+    .unit-trigger-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .unit-symbol {
+      overflow: hidden;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .unit-cat {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .chevron {
+      flex: none;
+      width: 6px;
+      height: 6px;
+      margin-right: 2px;
+      border-right: 1.5px solid var(--muted);
+      border-bottom: 1.5px solid var(--muted);
+      transform: translateY(-2px) rotate(45deg);
+      transition: transform 0.15s;
+    }
+
+    .unit-trigger[aria-expanded="true"] .chevron {
+      transform: translateY(1px) rotate(-135deg);
+    }
+
+    .unit-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      z-index: 50;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 24px 50px -22px rgba(20, 35, 29, 0.45);
+    }
+
+    .unit-menu[hidden] { display: none; }
+
+    .search-wrap {
+      padding: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .search-wrap input {
+      width: 100%;
+      height: 36px;
+      padding: 0 10px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--ink);
+      background: #f7faf8;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      outline: none;
+    }
+
+    .search-wrap input:focus {
+      background: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(11, 107, 82, 0.1);
+    }
+
+    .unit-list {
+      max-height: 264px;
+      padding: 4px 0 6px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .unit-group-label {
+      padding: 8px 12px 3px;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .unit-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      padding: 7px 12px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--ink);
+      text-align: left;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .unit-option:hover,
+    .unit-option:focus-visible {
+      background: var(--accent-soft);
+      outline: none;
+    }
+
+    .unit-option[aria-selected="true"] { background: var(--accent-soft); }
+
+    .unit-option .option-symbol { font-weight: 600; }
+
+    .option-tag {
+      flex: none;
+      padding: 2px 6px;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 650;
+      white-space: nowrap;
+      background: #f1f5f2;
+      border-radius: 999px;
+    }
+
+    .unit-empty {
+      padding: 16px 12px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* ---------- Result row under the value input ---------- */
+    .value-input { min-width: 0; width: 100%; }
+    .value-row, .result-row { min-width: 0; }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 8px 10px 8px 14px;
+      background: var(--accent-soft);
+      border: 1px solid #d2e6dc;
+      border-radius: 12px;
+    }
+
+    .result-row .result-value {
+      flex: 1;
+      min-width: 0;
+      font-size: clamp(24px, 4.2vw, 32px);
+    }
+
+    .result-row .result-unit { flex: none; }
+
+    .result-row .swap-btn {
+      flex: none;
+      align-self: center;
+      margin: 0;
+      width: 38px;
+      height: 38px;
+    }
+
+    .result-row .swap-btn svg { width: 16px; height: 16px; }
+
+    /* Collapse the extra-input area completely when nothing is needed. */
+    .extra-fields:not(.visible) { display: none; }
+
+    @media (max-width: 520px) {
+      .app::before { border-radius: 18px 18px 0 0; }
+      .field-row { grid-template-columns: 1fr; }
+      .result-row .swap-btn,
+      .result-row .swap-btn:hover,
+      .result-row .swap-btn:active {
+        align-self: center;
+        margin: 0;
+        transform: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">⇄</span>
+        <span>Petro / Convert</span>
+      </div>
+      <h1>Unit Converter</h1>
+      <p class="subtitle">All process units in one place — type to search, swap to reverse.</p>
+    </header>
+
+    <section class="converter" aria-label="Unit converter">
+      <div class="field-row">
+        <div class="unit-field">
+          <span class="field-label" id="fromLabel">From</span>
+          <div class="search-select">
+            <button class="unit-trigger" id="fromTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="fromLabel fromSymbol">
+              <span class="unit-trigger-text">
+                <span class="unit-symbol" id="fromSymbol">bar</span>
+                <span class="unit-cat" id="fromCategory">Pressure</span>
+              </span>
+              <span class="chevron" aria-hidden="true"></span>
+            </button>
+            <div class="unit-menu" id="fromMenu" hidden>
+              <div class="search-wrap">
+                <input id="fromSearch" type="text" placeholder="Search units…" autocomplete="off" spellcheck="false" aria-label="Search units" aria-controls="fromList">
+              </div>
+              <div class="unit-list" id="fromList" role="listbox" aria-label="Units"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="unit-field">
+          <label class="field-label" for="toUnit">To</label>
+          <div class="select-wrapper">
+            <select class="unit-select" id="toUnit" aria-label="Target unit"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="value-row">
+        <input
+          class="value-input"
+          id="inputValue"
+          type="number"
+          inputmode="decimal"
+          step="any"
+          value="1"
+          placeholder="Enter value"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Value to convert"
+        >
+      </div>
+
+      <div class="result-row">
+        <output class="result-value empty" id="result" aria-live="polite">—</output>
+        <span class="result-unit" id="resultUnit"></span>
+        <button class="swap-btn" id="swapBtn" type="button" aria-label="Swap units" title="Swap units">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 7h14"></path>
+            <path d="m15 4 3 3-3 3"></path>
+            <path d="M20 17H6"></path>
+            <path d="m9 14-3 3 3 3"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Conditional extra inputs -->
+      <div class="extra-fields" id="extraFields" aria-live="polite">
+        <!-- Gauge -> Absolute: P_atm -->
+        <div class="extra-field" id="extraPatm" hidden>
+          <label class="field-label">Atmospheric pressure</label>
+          <div class="select-wrapper" style="flex:1;">
+            <select class="unit-select" id="patmUnit" style="height:40px;font-size:13px;">
+              <option value="kpa">kPa</option>
+              <option value="bar" selected>bar</option>
+              <option value="psi">psi</option>
+            </select>
+          </div>
+          <input class="extra-input" id="patmVal" type="number" step="any" value="1.01325" aria-label="Atmospheric pressure" placeholder="1.01325">
+        </div>
+
+        <!-- mg/m3 <-> ppm: molar mass -->
+        <div class="extra-field" id="extraMolar" hidden>
+          <label class="field-label">Molar mass M (g/mol)</label>
+          <input class="extra-input" id="molarMass" type="number" step="any" value="44" aria-label="Molar mass" placeholder="44">
+        </div>
+
+        <!-- wt% <-> mol%: M1, M2 -->
+        <div class="extra-field" id="extraM1" hidden>
+          <label class="field-label">M₁ (g/mol)</label>
+          <input class="extra-input" id="m1Val" type="number" step="any" value="18" aria-label="Molar mass component 1" placeholder="18">
+        </div>
+        <div class="extra-field" id="extraM2" hidden>
+          <label class="field-label">M₂ (g/mol)</label>
+          <input class="extra-input" id="m2Val" type="number" step="any" value="44" aria-label="Molar mass component 2" placeholder="44">
+        </div>
+
+        <!-- Dynamic <-> Kinematic viscosity: density -->
+        <div class="extra-field" id="extraRho" hidden>
+          <label class="field-label">Density ρ (kg/m³)</label>
+          <input class="extra-input" id="rhoVal" type="number" step="any" value="1000" aria-label="Density" placeholder="1000">
+        </div>
+      </div>
+
+      <div class="meta">
+        <span id="metaInfo"></span>
+        <span class="live-indicator"><span class="dot" aria-hidden="true"></span>Live</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+/* ============================================================
+   PART A: LINEAR UNITS TABLE (unchanged)
+   ============================================================ */
+
+const IN_M  = 0.0254;
+const LB_KG = 0.45359237;
+const ATM_PA = 101325;
+const BAR_PA = 100000;
+const PSI_PA = 6894.757293168;
+const MMHG_PA = 133.322387415;
+const KGf_N = 9.80665;
+const LBf_N = 4.4482216152605;
+const GAL_US_L = 3.785411784;
+const BBL_GAL_US = 42;
+const CAL_J = 4.184;
+const BTU_J = 1055.05585262;
+const HP_W = 745.6998715823;
+const KWH_J = 3.6e6;
+
+const FT_M = 12 * IN_M;
+const YD_M = 3 * FT_M;
+const MI_M = 1760 * YD_M;
+const LB_FT3_KGM3 = LB_KG / (FT_M ** 3);
+const LB_GAL_US_KGM3 = LB_KG / (GAL_US_L / 1000);
+const BBL_M3 = BBL_GAL_US * GAL_US_L / 1000;
+const FT3_M3 = FT_M ** 3;
+const IN3_M3 = IN_M ** 3;
+const LBF_FT_NM = LBf_N * FT_M;
+const KGf_M_NM = KGf_N * 1;
+const HP_KW = HP_W / 1000;
+const BTUH_KW = BTU_J / 3600 / 1000;
+const KCAL_KJ = CAL_J;
+const KCALH_KW = KCAL_KJ / 3600;
+const ATMPA_KPA = ATM_PA / 1000;
+const BAR_KPA = BAR_PA / 1000;
+const PSI_KPA = PSI_PA / 1000;
+
+const LINEAR_UNITS = {
+  pressure: {
+    label: "Pressure",
+    base: "Pa",
+    units: [
+      { id: "pa",      label: "Pa",        factor: 1 },
+      { id: "kpa",     label: "kPa",       factor: 1e3 },
+      { id: "mpa",     label: "MPa",       factor: 1e6 },
+      { id: "bar",     label: "bar",       factor: BAR_PA },
+      { id: "mbar",    label: "mbar",      factor: 100 },
+      { id: "atm",     label: "atm",       factor: ATM_PA },
+      { id: "psi",     label: "psi",       factor: PSI_PA },
+      { id: "kgfcm2",  label: "kgf/cm²",   factor: KGf_N / (0.01 ** 2) },
+      { id: "mmhg",    label: "mmHg",      factor: MMHG_PA },
+      { id: "torr",    label: "torr",      factor: MMHG_PA },
+      { id: "inh2o",   label: "inH₂O (4°C)", factor: 249.089 },
+      { id: "mmh2o",   label: "mmH₂O (4°C)", factor: 9.80665 },
+      { id: "inhg",    label: "inHg (0°C)",  factor: 3386.388640341 },
+    ]
+  },
+
+  length: {
+    label: "Length",
+    base: "m",
+    units: [
+      { id: "um",    label: "µm",     factor: 1e-6 },
+      { id: "mm",    label: "mm",     factor: 1e-3 },
+      { id: "cm",    label: "cm",     factor: 1e-2 },
+      { id: "m",     label: "m",      factor: 1 },
+      { id: "km",    label: "km",     factor: 1e3 },
+      { id: "in",    label: "in",     factor: IN_M },
+      { id: "ft",    label: "ft",     factor: FT_M },
+      { id: "yd",    label: "yd",     factor: YD_M },
+      { id: "mile",  label: "mile",   factor: MI_M },
+    ]
+  },
+
+  area: {
+    label: "Area",
+    base: "m²",
+    units: [
+      { id: "mm2",  label: "mm²", factor: 1e-6 },
+      { id: "cm2",  label: "cm²", factor: 1e-4 },
+      { id: "m2",   label: "m²",  factor: 1 },
+      { id: "in2",  label: "in²", factor: IN_M ** 2 },
+      { id: "ft2",  label: "ft²", factor: FT_M ** 2 },
+    ]
+  },
+
+  volume: {
+    label: "Volume",
+    base: "m³",
+    units: [
+      { id: "ml",    label: "mL",      factor: 1e-6 },
+      { id: "l",     label: "L",       factor: 1e-3 },
+      { id: "m3",    label: "m³",      factor: 1 },
+      { id: "in3",   label: "in³",     factor: IN3_M3 },
+      { id: "ft3",   label: "ft³",     factor: FT3_M3 },
+      { id: "galus", label: "US gal",  factor: GAL_US_L / 1000 },
+      { id: "galuk", label: "UK gal",  factor: 4.54609 / 1000 },
+      { id: "bbl",   label: "bbl",     factor: BBL_M3 },
+    ]
+  },
+
+  mass: {
+    label: "Mass",
+    base: "kg",
+    units: [
+      { id: "mg",    label: "mg",       factor: 1e-6 },
+      { id: "g",     label: "g",        factor: 1e-3 },
+      { id: "kg",    label: "kg",       factor: 1 },
+      { id: "t",     label: "tonne (t)",factor: 1e3 },
+      { id: "lb",    label: "lb",       factor: LB_KG },
+      { id: "oz",    label: "oz",       factor: LB_KG / 16 },
+      { id: "ton",   label: "short ton",factor: 2000 * LB_KG },
+      { id: "lton",  label: "long ton", factor: 2240 * LB_KG },
+    ]
+  },
+
+  time: {
+    label: "Time",
+    base: "s",
+    units: [
+      { id: "s",    label: "s",    factor: 1 },
+      { id: "min",  label: "min",  factor: 60 },
+      { id: "h",    label: "h",    factor: 3600 },
+      { id: "day",  label: "day",  factor: 86400 },
+      { id: "year", label: "year", factor: 31557600 },
+    ]
+  },
+
+  speed: {
+    label: "Speed",
+    base: "m/s",
+    units: [
+      { id: "ms",    label: "m/s",    factor: 1 },
+      { id: "cms",   label: "cm/s",   factor: 0.01 },
+      { id: "mms",   label: "mm/s",   factor: 0.001 },
+      { id: "mmin",  label: "m/min",  factor: 1/60 },
+      { id: "kmh",   label: "km/h",   factor: 1/3.6 },
+      { id: "fts",   label: "ft/s",   factor: FT_M },
+      { id: "ftmin", label: "ft/min", factor: FT_M / 60 },
+      { id: "ins",   label: "in/s",   factor: IN_M },
+      { id: "mph",   label: "mph",    factor: MI_M / 3600 },
+    ]
+  },
+
+  rotational: {
+    label: "Rotational speed",
+    base: "rad/s",
+    units: [
+      { id: "rpm",   label: "rpm",    factor: 2 * Math.PI / 60 },
+      { id: "rads",  label: "rad/s",  factor: 1 },
+      { id: "hz",    label: "Hz",     factor: 2 * Math.PI },
+      { id: "revs",  label: "rev/s",  factor: 2 * Math.PI },
+      { id: "degs",  label: "deg/s",  factor: Math.PI / 180 },
+    ]
+  },
+
+  acceleration: {
+    label: "Acceleration",
+    base: "m/s²",
+    units: [
+      { id: "ms2", label: "m/s²", factor: 1 },
+      { id: "fts2",label: "ft/s²", factor: FT_M },
+      { id: "g",   label: "g",      factor: 9.80665 },
+    ]
+  },
+
+  force: {
+    label: "Force",
+    base: "N",
+    units: [
+      { id: "n",   label: "N",   factor: 1 },
+      { id: "kn",  label: "kN",  factor: 1e3 },
+      { id: "kgf", label: "kgf", factor: KGf_N },
+      { id: "lbf", label: "lbf", factor: LBf_N },
+    ]
+  },
+
+  torque: {
+    label: "Torque",
+    base: "N·m",
+    units: [
+      { id: "nm",    label: "N·m",    factor: 1 },
+      { id: "knm",   label: "kN·m",   factor: 1e3 },
+      { id: "lbfft", label: "lbf·ft", factor: LBF_FT_NM },
+      { id: "kgfm",  label: "kgf·m",  factor: KGf_M_NM },
+    ]
+  },
+
+  angle: {
+    label: "Angle",
+    base: "rad",
+    units: [
+      { id: "deg", label: "deg", factor: Math.PI / 180 },
+      { id: "rad", label: "rad", factor: 1 },
+      { id: "grad",label: "grad", factor: Math.PI / 200 },
+    ]
+  },
+
+  flow_vol: {
+    label: "Flow (volumetric)",
+    base: "m³/s",
+    units: [
+      { id: "m3s",  label: "m³/s",   factor: 1 },
+      { id: "m3h",  label: "m³/h",   factor: 1/3600 },
+      { id: "m3d",  label: "m³/day", factor: 1/86400 },
+      { id: "ls",   label: "L/s",    factor: 1e-3 },
+      { id: "lmin", label: "L/min",  factor: 1e-3/60 },
+      { id: "gpm",  label: "US gpm", factor: GAL_US_L/1000/60 },
+      { id: "bbld", label: "bbl/day",factor: BBL_M3/86400 },
+      { id: "kbbl", label: "kbbl/day",factor: 1000*BBL_M3/86400 },
+      { id: "ft3min",label:"ft³/min",factor: FT3_M3/60 },
+      { id: "ft3h",  label: "ft³/h", factor: FT3_M3/3600 },
+    ]
+  },
+
+  flow_mass: {
+    label: "Flow (mass)",
+    base: "kg/s",
+    units: [
+      { id: "kgs", label: "kg/s",   factor: 1 },
+      { id: "kgh", label: "kg/h",   factor: 1/3600 },
+      { id: "tonh",label: "t/h",    factor: 1000/3600 },
+      { id: "tond",label: "t/day",  factor: 1000/86400 },
+      { id: "tony",label: "t/year", factor: 1000/31557600 },
+      { id: "lbs", label: "lb/s",   factor: LB_KG },
+      { id: "lbh", label: "lb/h",   factor: LB_KG/3600 },
+    ]
+  },
+
+  flow_molar: {
+    label: "Flow (molar)",
+    base: "mol/s",
+    units: [
+      { id: "mols",  label: "mol/s",   factor: 1 },
+      { id: "kmolh", label: "kmol/h",  factor: 1000/3600 },
+      { id: "lbmolh",label: "lbmol/h", factor: 453.59237/3600 },
+    ]
+  },
+
+  energy: {
+    label: "Energy",
+    base: "J",
+    units: [
+      { id: "j",    label: "J",    factor: 1 },
+      { id: "kj",   label: "kJ",   factor: 1e3 },
+      { id: "mj",   label: "MJ",   factor: 1e6 },
+      { id: "cal",  label: "cal",  factor: CAL_J },
+      { id: "kcal", label: "kcal", factor: KCAL_KJ * 1e3 },
+      { id: "btu",  label: "Btu",  factor: BTU_J },
+      { id: "kwh",  label: "kWh",  factor: KWH_J },
+    ]
+  },
+
+  power: {
+    label: "Power",
+    base: "W",
+    units: [
+      { id: "w",     label: "W",     factor: 1 },
+      { id: "kw",    label: "kW",    factor: 1e3 },
+      { id: "mw",    label: "MW",    factor: 1e6 },
+      { id: "hp",    label: "hp",    factor: HP_W },
+      { id: "btuh",  label: "Btu/h", factor: BTUH_KW * 1000 },
+      { id: "kcalkh",label: "kcal/h",factor: KCALH_KW * 1000 },
+    ]
+  },
+
+  specific_heat: {
+    label: "Specific heat",
+    base: "J/(kg·K)",
+    units: [
+      { id: "kjkgk", label: "kJ/(kg·K)", factor: 1e3 },
+      { id: "kcalck",label: "kcal/(kg·°C)",factor: KCAL_KJ * 1e3 },
+      { id: "btulf", label: "Btu/(lb·°F)", factor: BTU_J / LB_KG / (5/9) },
+    ]
+  },
+
+  thermal_cond: {
+    label: "Thermal conductivity",
+    base: "W/(m·K)",
+    units: [
+      { id: "wmk",     label: "W/(m·K)",      factor: 1 },
+      { id: "btuhftf", label: "Btu/(h·ft·°F)",factor: BTU_J/3600 / FT_M / (5/9) },
+    ]
+  },
+
+  heat_transfer: {
+    label: "Heat transfer coefficient",
+    base: "W/(m²·K)",
+    units: [
+      { id: "wm2k",      label: "W/(m²·K)",        factor: 1 },
+      { id: "kcalkhm2c", label: "kcal/(h·m²·°C)",  factor: KCAL_KJ/3600 * 1e3 },
+      { id: "btuhft2f",  label: "Btu/(h·ft²·°F)",  factor: BTU_J/3600 / (FT_M**2) / (5/9) },
+    ]
+  },
+
+  heat_flux: {
+    label: "Heat flux",
+    base: "W/m²",
+    units: [
+      { id: "wm2",    label: "W/m²",       factor: 1 },
+      { id: "kcalkhm2",label: "kcal/(h·m²)",factor: KCAL_KJ/3600 * 1e3 },
+      { id: "btuhft2",label: "Btu/(h·ft²)",factor: BTU_J/3600 / (FT_M**2) },
+    ]
+  },
+
+  specific_energy: {
+    label: "Specific energy",
+    base: "J/kg",
+    units: [
+      { id: "kjkg",  label: "kJ/kg",  factor: 1e3 },
+      { id: "kcalkg",label: "kcal/kg",factor: KCAL_KJ * 1e3 },
+      { id: "btulb", label: "Btu/lb", factor: BTU_J / LB_KG },
+    ]
+  },
+
+  viscosity_dyn: {
+    label: "Dynamic viscosity",
+    base: "Pa·s",
+    units: [
+      { id: "pas", label: "Pa·s", factor: 1 },
+      { id: "mpas",label: "mPa·s",factor: 1e-3 },
+      { id: "cp",  label: "cP",    factor: 1e-3 },
+      { id: "p",   label: "P",     factor: 0.1 },
+    ]
+  },
+
+  viscosity_kin: {
+    label: "Kinematic viscosity",
+    base: "m²/s",
+    units: [
+      { id: "m2s",  label: "m²/s",  factor: 1 },
+      { id: "mm2s", label: "mm²/s", factor: 1e-6 },
+      { id: "cst",  label: "cSt",   factor: 1e-6 },
+      { id: "st",   label: "St",    factor: 1e-4 },
+    ]
+  },
+
+  density: {
+    label: "Density",
+    base: "kg/m³",
+    units: [
+      { id: "kgm3", label: "kg/m³",   factor: 1 },
+      { id: "gcm3", label: "g/cm³",   factor: 1000 },
+      { id: "gl",   label: "g/L",     factor: 1 },
+      { id: "lbft3",label: "lb/ft³",  factor: LB_FT3_KGM3 },
+      { id: "lbgal",label: "lb/US gal",factor: LB_GAL_US_KGM3 },
+    ]
+  },
+
+  specific_volume: {
+    label: "Specific volume",
+    base: "m³/kg",
+    units: [
+      { id: "m3kg", label: "m³/kg",  factor: 1 },
+      { id: "lkg",  label: "L/kg",   factor: 1e-3 },
+      { id: "ft3lb",label: "ft³/lb", factor: FT3_M3 / LB_KG },
+    ]
+  },
+
+  concentration: {
+    label: "Concentration",
+    base: "mol/m³",
+    units: [
+      { id: "moll",   label: "mol/L",    factor: 1000 },
+      { id: "mmoll",  label: "mmol/L",   factor: 1 },
+      { id: "gpl",    label: "g/L",      factor: 1 },
+      { id: "mgpl",   label: "mg/L",     factor: 1 },
+      { id: "kgm3",   label: "kg/m³",    factor: 1 },
+      { id: "molm3",  label: "mol/m³",   factor: 1 },
+      { id: "ppm",    label: "ppm (mass)", factor: 1 },
+      { id: "ppb",    label: "ppb (mass)", factor: 1 },
+    ]
+  },
+
+  mass_flux: {
+    label: "Mass flux",
+    base: "kg/(m²·s)",
+    units: [
+      { id: "kgm2s",  label: "kg/(m²·s)", factor: 1 },
+      { id: "kgm2h",  label: "kg/(m²·h)", factor: 1/3600 },
+      { id: "lbft2h", label: "lb/(ft²·h)",factor: LB_KG / (FT_M**2) / 3600 },
+    ]
+  },
+
+  reaction_rate: {
+    label: "Reaction rate",
+    base: "mol/(m³·s)",
+    units: [
+      { id: "mollS",  label: "mol/(L·s)",  factor: 1e6 },
+      { id: "molm3s", label: "mol/(m³·s)", factor: 1 },
+      { id: "kmolm3h",label: "kmol/(m³·h)",factor: 1000/3600 },
+    ]
+  },
+
+  catalyst_area: {
+    label: "Catalyst surface area",
+    base: "m²/g",
+    units: [
+      { id: "m2g",  label: "m²/g",  factor: 1 },
+      { id: "cm2g", label: "cm²/g", factor: 1e-4 },
+    ]
+  },
+
+  catalyst_pore: {
+    label: "Catalyst pore volume",
+    base: "cm³/g",
+    units: [
+      { id: "cm3g", label: "cm³/g", factor: 1 },
+      { id: "mlg",  label: "mL/g",  factor: 1 },
+    ]
+  },
+
+  space_velocity: {
+    label: "Space velocity",
+    base: "1/s",
+    units: [
+      { id: "perh",  label: "1/h",  factor: 1/3600 },
+      { id: "permin",label: "1/min",factor: 1/60 },
+      { id: "pers",  label: "1/s",  factor: 1 },
+    ]
+  },
+
+  surface_tension: {
+    label: "Surface tension",
+    base: "N/m",
+    units: [
+      { id: "nm",    label: "N/m",    factor: 1 },
+      { id: "mnm",   label: "mN/m",   factor: 1e-3 },
+      { id: "dyncm", label: "dyn/cm", factor: 1e-3 },
+    ]
+  },
+
+  diffusivity: {
+    label: "Diffusivity",
+    base: "m²/s",
+    units: [
+      { id: "m2s", label: "m²/s", factor: 1 },
+      { id: "cm2s",label: "cm²/s",factor: 1e-4 },
+    ]
+  },
+
+  molar_volume: {
+    label: "Molar volume",
+    base: "m³/mol",
+    units: [
+      { id: "lmol",   label: "L/mol",    factor: 1e-3 },
+      { id: "m3kmol", label: "m³/kmol",  factor: 1 },
+      { id: "cm3mol", label: "cm³/mol",  factor: 1e-6 },
+    ]
+  },
+
+  molar_mass: {
+    label: "Molar mass",
+    base: "g/mol",
+    units: [
+      { id: "gmol",    label: "g/mol",     factor: 1 },
+      { id: "kgmol",   label: "kg/mol",    factor: 1000 },
+      { id: "kgkmol",  label: "kg/kmol",   factor: 1 },
+      { id: "lblbmol", label: "lb/lbmol",  factor: LB_KG * 1000 },
+      { id: "kda",     label: "kDa",       factor: 1000 },
+    ]
+  },
+
+  heat_reaction: {
+    label: "Heat of reaction",
+    base: "J/mol",
+    units: [
+      { id: "kjmol",   label: "kJ/mol",   factor: 1e3 },
+      { id: "kcalmol", label: "kcal/mol", factor: KCAL_KJ * 1e3 },
+      { id: "kjkmol",  label: "kJ/kmol",  factor: 1 },
+      { id: "btulbmol",label: "Btu/lbmol",factor: BTU_J / LB_KG },
+    ]
+  },
+
+  gas_constant: {
+    label: "Gas constant",
+    base: "J/(mol·K)",
+    units: [
+      { id: "jmolk",      label: "J/(mol·K)",      factor: 1 },
+      { id: "latmmolk",   label: "L·atm/(mol·K)",  factor: 101.325 },
+      { id: "calmolk",    label: "cal/(mol·K)",    factor: CAL_J },
+    ]
+  },
+
+  current: {
+    label: "Electric current",
+    base: "A",
+    units: [
+      { id: "ua", label: "µA", factor: 1e-6 },
+      { id: "ma", label: "mA", factor: 1e-3 },
+      { id: "a",  label: "A",  factor: 1 },
+    ]
+  },
+
+  voltage: {
+    label: "Voltage",
+    base: "V",
+    units: [
+      { id: "mv", label: "mV", factor: 1e-3 },
+      { id: "v",  label: "V",  factor: 1 },
+      { id: "kv", label: "kV", factor: 1e3 },
+    ]
+  },
+
+  resistance: {
+    label: "Resistance",
+    base: "Ω",
+    units: [
+      { id: "ohm",  label: "Ω",   factor: 1 },
+      { id: "kohm", label: "kΩ",  factor: 1e3 },
+      { id: "mohm", label: "MΩ",  factor: 1e6 },
+    ]
+  },
+
+  frequency: {
+    label: "Frequency",
+    base: "Hz",
+    units: [
+      { id: "hz",  label: "Hz",  factor: 1 },
+      { id: "khz", label: "kHz", factor: 1e3 },
+      { id: "mhz", label: "MHz", factor: 1e6 },
+    ]
+  },
+
+  illuminance: {
+    label: "Illuminance",
+    base: "lux",
+    units: [
+      { id: "lux", label: "lux", factor: 1 },
+    ]
+  },
+
+  melt_flow: {
+    label: "Melt flow index",
+    base: "g/10min",
+    units: [
+      { id: "g10min", label: "g/10 min", factor: 1 },
+    ]
+  },
+};
+
+/* ============================================================
+   SPECIAL UNITS (Temperature, API/SG/Density)
+   These use formulas but appear in the same dropdown list.
+   ============================================================ */
+
+const SPECIAL_UNITS = {
+  temperature: {
+    label: "Temperature",
+    units: [
+      { id: "c",  label: "°C", category: "temperature" },
+      { id: "k",  label: "K",  category: "temperature" },
+      { id: "f",  label: "°F", category: "temperature" },
+      { id: "r",  label: "°R", category: "temperature" },
+    ],
+    convert: (val, from, to) => {
+      // to Kelvin
+      let k;
+      switch (from) {
+        case "c": k = val + 273.15; break;
+        case "f": k = (val - 32) * 5/9 + 273.15; break;
+        case "r": k = val * 5/9; break;
+        default:  k = val;
+      }
+      // from Kelvin
+      switch (to) {
+        case "c": return k - 273.15;
+        case "f": return (k - 273.15) * 9/5 + 32;
+        case "r": return k * 9/5;
+        default:  return k;
+      }
+    }
+  },
+
+  api_sg_density: {
+    label: "API / SG / Density",
+    units: [
+      { id: "api",   label: "°API",       category: "api_sg_density" },
+      { id: "sg",    label: "SG (60°F)",  category: "api_sg_density" },
+      { id: "kgm3",  label: "kg/m³",      category: "api_sg_density" },
+      { id: "lbft3", label: "lb/ft³",     category: "api_sg_density" },
+      { id: "gcm3",  label: "g/cm³",      category: "api_sg_density" },
+      { id: "lbgal", label: "lb/US gal",  category: "api_sg_density" },
+    ],
+    convert: (val, from, to) => {
+      // All through SG at 60°F (water = 999.016 kg/m³)
+      const RHO_W = 999.016;
+      let sg;
+      if (from === "api") sg = 141.5 / (val + 131.5);
+      else if (from === "sg") sg = val;
+      else if (from === "kgm3") sg = val / RHO_W;
+      else if (from === "gcm3") sg = val * 1000 / RHO_W;
+      else if (from === "lbft3") sg = val * 16.01846337396014 / RHO_W;
+      else if (from === "lbgal") sg = val * 119.82642731689663 / RHO_W;
+      else return NaN;
+
+      if (to === "api") return 141.5 / sg - 131.5;
+      if (to === "sg") return sg;
+      if (to === "kgm3") return sg * RHO_W;
+      if (to === "gcm3") return sg * RHO_W / 1000;
+      if (to === "lbft3") return sg * RHO_W / 16.01846337396014;
+      if (to === "lbgal") return sg * RHO_W / 119.82642731689663;
+      return NaN;
+    }
+  },
+
+  // Gauge <-> Absolute pressure (special category)
+  gauge_abs: {
+    label: "Gauge / Absolute Pressure",
+    units: [
+      { id: "gauge_kpa", label: "kPa (gauge)", category: "gauge_abs" },
+      { id: "gauge_bar", label: "bar (gauge)", category: "gauge_abs" },
+      { id: "gauge_psi", label: "psi (gauge)", category: "gauge_abs" },
+      { id: "abs_kpa",   label: "kPa (abs)",   category: "gauge_abs" },
+      { id: "abs_bar",   label: "bar (abs)",   category: "gauge_abs" },
+      { id: "abs_psi",   label: "psi (abs)",   category: "gauge_abs" },
+    ],
+    convert: (val, from, to, patmKpa) => {
+      // patmKpa in kPa
+      const factors = { kpa: 1, bar: 100, psi: PSI_KPA };
+      const fromAbs = from.startsWith("abs_");
+      const toAbs = to.startsWith("abs_");
+      const fromUnit = from.replace(/^(gauge_|abs_)/, "");
+      const toUnit = to.replace(/^(gauge_|abs_)/, "");
+
+      let kpa = val * factors[fromUnit];
+      if (!fromAbs) kpa += patmKpa; // gauge -> absolute
+      if (!toAbs) kpa -= patmKpa;   // absolute -> gauge
+      return kpa / factors[toUnit];
+    },
+    needsPatm: true
+  },
+
+  // mg/m3 <-> ppm (gas)
+  mgm3_ppm: {
+    label: "mg/m³ / ppm (gas)",
+    units: [
+      { id: "mgm3", label: "mg/m³", category: "mgm3_ppm" },
+      { id: "ppm",  label: "ppm",   category: "mgm3_ppm" },
+    ],
+    convert: (val, from, to, molarMass) => {
+      if (from === "ppm" && to === "mgm3") return val * molarMass / 24.45;
+      if (from === "mgm3" && to === "ppm") return val * 24.45 / molarMass;
+      return val;
+    },
+    needsMolarMass: true
+  },
+
+  // Binary mixture wt% <-> mol%
+  wt_mol: {
+    label: "wt% / mol% (binary)",
+    units: [
+      { id: "wt1",  label: "wt% comp. 1", category: "wt_mol" },
+      { id: "mol1", label: "mol% comp. 1", category: "wt_mol" },
+      { id: "wt2",  label: "wt% comp. 2", category: "wt_mol" },
+      { id: "mol2", label: "mol% comp. 2", category: "wt_mol" },
+    ],
+    convert: (val, from, to, m1, m2) => {
+      // from wt1 or mol1 or wt2 or mol2 to target
+      let w1, w2, n1, n2;
+      if (from === "wt1") { w1 = val; w2 = 100 - val; }
+      else if (from === "wt2") { w2 = val; w1 = 100 - val; }
+      else if (from === "mol1") { n1 = val; n2 = 100 - val; }
+      else if (from === "mol2") { n2 = val; n1 = 100 - val; }
+      else return NaN;
+
+      if (w1 !== undefined) {
+        n1 = w1 / m1;
+        n2 = w2 / m2;
+      } else {
+        w1 = n1 * m1;
+        w2 = n2 * m2;
+        const wtot = w1 + w2;
+        w1 = w1 / wtot * 100;
+        w2 = w2 / wtot * 100;
+        n1 = w1 / m1;
+        n2 = w2 / m2;
+      }
+      const ntot = n1 + n2;
+      const mol1pct = n1 / ntot * 100;
+      const mol2pct = n2 / ntot * 100;
+      const wt1pct = w1;
+      const wt2pct = w2;
+
+      if (to === "wt1") return wt1pct;
+      if (to === "wt2") return wt2pct;
+      if (to === "mol1") return mol1pct;
+      if (to === "mol2") return mol2pct;
+      return NaN;
+    },
+    needsM1M2: true
+  },
+
+  // Dynamic <-> Kinematic viscosity
+  dyn_kin: {
+    label: "Dynamic / Kinematic viscosity",
+    units: [
+      { id: "pas",  label: "Pa·s",      category: "dyn_kin" },
+      { id: "mpas", label: "mPa·s",     category: "dyn_kin" },
+      { id: "cp",   label: "cP",        category: "dyn_kin" },
+      { id: "p",    label: "P",         category: "dyn_kin" },
+      { id: "m2s",  label: "m²/s",      category: "dyn_kin" },
+      { id: "mm2s", label: "mm²/s",     category: "dyn_kin" },
+      { id: "cst",  label: "cSt",       category: "dyn_kin" },
+      { id: "st",   label: "St",        category: "dyn_kin" },
+    ],
+    convert: (val, from, to, rho) => {
+      const dynF = { pas: 1, mpas: 1e-3, cp: 1e-3, p: 0.1 };
+      const kinF = { m2s: 1, mm2s: 1e-6, cst: 1e-6, st: 1e-4 };
+      const isDyn = from in dynF;
+      const isKin = from in kinF;
+      const toDyn = to in dynF;
+      const toKin = to in kinF;
+
+      if (isDyn && toKin) return (val * dynF[from]) / rho / kinF[to];
+      if (isKin && toDyn) return (val * kinF[from]) * rho / dynF[to];
+      if (isDyn && toDyn) return val * dynF[from] / dynF[to];
+      if (isKin && toKin) return val * kinF[from] / kinF[to];
+      return NaN;
+    },
+    needsRho: true
+  },
+};
+
+/* ============================================================
+   UNIFIED UNIT CATALOG
+   Every unit gets a unique key "<category>:<id>", because some
+   ids (nm, m2s, hz, kgm3, ...) exist in more than one category.
+   ============================================================ */
+
+const CATEGORY_ORDER = [
+  "pressure", "temperature", "api_sg_density", "gauge_abs", "mgm3_ppm", "wt_mol", "dyn_kin",
+  "length", "area", "volume", "mass", "time", "speed", "rotational", "acceleration",
+  "force", "torque", "angle",
+  "flow_vol", "flow_mass", "flow_molar",
+  "energy", "power", "specific_heat", "thermal_cond", "heat_transfer", "heat_flux", "specific_energy",
+  "viscosity_dyn", "viscosity_kin", "density", "specific_volume", "concentration",
+  "mass_flux", "reaction_rate", "catalyst_area", "catalyst_pore", "space_velocity",
+  "surface_tension", "diffusivity", "molar_volume", "molar_mass", "heat_reaction", "gas_constant",
+  "current", "voltage", "resistance", "frequency", "illuminance", "melt_flow"
+];
+
+const ALL_UNITS = [];
+const UNIT_BY_KEY = new Map();
+const SYMBOL_COUNTS = {};
+const UNITS_BY_CATEGORY = new Map();
+
+// Search is forgiving: ² -> 2, µ -> u, "·" and "." removed, spaces removed.
+function normalizeText(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/²/g, "2")
+    .replace(/³/g, "3")
+    .replace(/[·.]/g, "")
+    .replace(/[µμ]/g, "u")
+    .replace(/\s+/g, "");
+}
+
+function registerUnit(unit) {
+  unit.search = normalizeText(unit.label + " " + unit.id + " " + unit.categoryLabel);
+  ALL_UNITS.push(unit);
+  UNIT_BY_KEY.set(unit.key, unit);
+  SYMBOL_COUNTS[unit.label] = (SYMBOL_COUNTS[unit.label] || 0) + 1;
+  if (!UNITS_BY_CATEGORY.has(unit.category)) UNITS_BY_CATEGORY.set(unit.category, []);
+  UNITS_BY_CATEGORY.get(unit.category).push(unit);
+}
+
+// Linear units: the factor table is untouched; this only adds a key.
+for (const [catKey, cat] of Object.entries(LINEAR_UNITS)) {
+  for (const u of cat.units) {
+    registerUnit({
+      key: catKey + ":" + u.id,
+      id: u.id,
+      label: u.label,
+      category: catKey,
+      categoryLabel: cat.label,
+      type: "linear",
+      factor: u.factor,
+      base: cat.base
+    });
+  }
+}
+
+// Formula-based units: their own convert() stays in SPECIAL_UNITS.
+for (const [specKey, spec] of Object.entries(SPECIAL_UNITS)) {
+  for (const u of spec.units) {
+    registerUnit({
+      key: specKey + ":" + u.id,
+      id: u.id,
+      label: u.label,
+      category: specKey,
+      categoryLabel: spec.label,
+      type: "special",
+      specialKey: specKey
+    });
+  }
+}
+
+ALL_UNITS.sort((a, b) => {
+  const ia = CATEGORY_ORDER.indexOf(a.category);
+  const ib = CATEGORY_ORDER.indexOf(b.category);
+  if (ia !== ib) return ia - ib;
+  return a.label.localeCompare(b.label);
+});
+
+/* ============================================================
+   DOM & STATE
+   ============================================================ */
+
+const fromTrigger = document.getElementById("fromTrigger");
+const fromSymbol = document.getElementById("fromSymbol");
+const fromCategory = document.getElementById("fromCategory");
+const fromMenu = document.getElementById("fromMenu");
+const fromSearch = document.getElementById("fromSearch");
+const fromList = document.getElementById("fromList");
+const toSelect = document.getElementById("toUnit");
+const inputEl = document.getElementById("inputValue");
+const resultEl = document.getElementById("result");
+const resultUnitEl = document.getElementById("resultUnit");
+const metaInfo = document.getElementById("metaInfo");
+const swapBtn = document.getElementById("swapBtn");
+const extraFields = document.getElementById("extraFields");
+
+const extraPatm = document.getElementById("extraPatm");
+const patmUnit = document.getElementById("patmUnit");
+const patmVal = document.getElementById("patmVal");
+const extraMolar = document.getElementById("extraMolar");
+const molarMass = document.getElementById("molarMass");
+const extraM1 = document.getElementById("extraM1");
+const m1Val = document.getElementById("m1Val");
+const extraM2 = document.getElementById("extraM2");
+const m2Val = document.getElementById("m2Val");
+const extraRho = document.getElementById("extraRho");
+const rhoVal = document.getElementById("rhoVal");
+
+const numberFormatter = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 9 });
+
+const state = { from: null, to: null };
+
+// Sensible "To" partner per unit. Units not listed fall back to the
+// first other unit of the same category.
+const DEFAULT_PARTNER = {
+  "pressure:bar": "pressure:psi",
+  "pressure:psi": "pressure:bar",
+  "pressure:kpa": "pressure:bar",
+  "pressure:mpa": "pressure:bar",
+  "pressure:atm": "pressure:bar",
+  "pressure:kgfcm2": "pressure:bar",
+  "pressure:mmhg": "pressure:torr",
+  "pressure:torr": "pressure:mmhg",
+
+  "temperature:c": "temperature:f",
+  "temperature:f": "temperature:c",
+  "temperature:k": "temperature:c",
+  "temperature:r": "temperature:k",
+
+  "api_sg_density:api": "api_sg_density:sg",
+  "api_sg_density:sg": "api_sg_density:api",
+  "api_sg_density:kgm3": "api_sg_density:api",
+
+  "gauge_abs:gauge_kpa": "gauge_abs:abs_kpa",
+  "gauge_abs:gauge_bar": "gauge_abs:abs_bar",
+  "gauge_abs:gauge_psi": "gauge_abs:abs_psi",
+  "gauge_abs:abs_kpa": "gauge_abs:gauge_kpa",
+  "gauge_abs:abs_bar": "gauge_abs:gauge_bar",
+  "gauge_abs:abs_psi": "gauge_abs:gauge_psi",
+
+  "mgm3_ppm:ppm": "mgm3_ppm:mgm3",
+  "mgm3_ppm:mgm3": "mgm3_ppm:ppm",
+
+  "wt_mol:wt1": "wt_mol:mol1",
+  "wt_mol:mol1": "wt_mol:wt1",
+  "wt_mol:wt2": "wt_mol:mol2",
+  "wt_mol:mol2": "wt_mol:wt2",
+
+  "dyn_kin:cp": "dyn_kin:cst",
+  "dyn_kin:cst": "dyn_kin:cp",
+  "dyn_kin:mpas": "dyn_kin:mm2s",
+  "dyn_kin:mm2s": "dyn_kin:mpas",
+
+  "length:m": "length:ft",
+  "length:ft": "length:m",
+  "length:in": "length:mm",
+  "length:mm": "length:in",
+  "mass:kg": "mass:lb",
+  "mass:lb": "mass:kg",
+  "volume:m3": "volume:bbl",
+  "volume:bbl": "volume:m3",
+  "volume:l": "volume:galus",
+  "volume:galus": "volume:l",
+  "energy:kj": "energy:btu",
+  "energy:btu": "energy:kj",
+  "energy:kcal": "energy:btu",
+  "power:kw": "power:hp",
+  "power:hp": "power:kw",
+  "flow_vol:m3h": "flow_vol:bbld",
+  "flow_vol:bbld": "flow_vol:m3h",
+  "flow_vol:gpm": "flow_vol:lmin",
+  "flow_vol:lmin": "flow_vol:gpm",
+  "viscosity_dyn:cp": "viscosity_dyn:mpas",
+  "viscosity_dyn:mpas": "viscosity_dyn:cp",
+  "viscosity_kin:cst": "viscosity_kin:mm2s",
+  "viscosity_kin:mm2s": "viscosity_kin:cst"
+};
+
+function findUnit(key) {
+  return UNIT_BY_KEY.get(key) || null;
+}
+
+function getCompatibleUnits(unit) {
+  return UNITS_BY_CATEGORY.get(unit.category) || [];
+}
+
+function pickDefaultPartner(unit) {
+  const preferredKey = DEFAULT_PARTNER[unit.key];
+  if (preferredKey && UNIT_BY_KEY.has(preferredKey)) return UNIT_BY_KEY.get(preferredKey);
+  const list = getCompatibleUnits(unit);
+  return list.find(u => u.key !== unit.key) || list[0] || null;
+}
+
+/* ============================================================
+   FROM DROPDOWN — searchable, grouped, duplicate-aware
+   ============================================================ */
+
+let fromMenuOpen = false;
+
+function buildFromList(query) {
+  const needle = normalizeText(query || "");
+  const fragment = document.createDocumentFragment();
+  let lastCategory = null;
+  let count = 0;
+
+  for (const unit of ALL_UNITS) {
+    if (needle && !unit.search.includes(needle)) continue;
+
+    if (unit.category !== lastCategory) {
+      lastCategory = unit.category;
+      const group = document.createElement("div");
+      group.className = "unit-group-label";
+      group.textContent = unit.categoryLabel;
+      fragment.appendChild(group);
+    }
+
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "unit-option";
+    option.setAttribute("role", "option");
+    option.dataset.key = unit.key;
+    option.setAttribute(
+      "aria-selected",
+      state.from && state.from.key === unit.key ? "true" : "false"
+    );
+
+    const symbol = document.createElement("span");
+    symbol.className = "option-symbol";
+    symbol.textContent = unit.label;
+    option.appendChild(symbol);
+
+    // Same symbol in two categories: show the category next to it.
+    if (SYMBOL_COUNTS[unit.label] > 1) {
+      const tag = document.createElement("span");
+      tag.className = "option-tag";
+      tag.textContent = unit.categoryLabel;
+      option.appendChild(tag);
+    }
+
+    fragment.appendChild(option);
+    count++;
+  }
+
+  if (count === 0) {
+    const empty = document.createElement("div");
+    empty.className = "unit-empty";
+    empty.textContent = "No units match your search.";
+    fragment.appendChild(empty);
+  }
+
+  fromList.replaceChildren(fragment);
+}
+
+function openFromMenu() {
+  if (fromMenuOpen) return;
+  fromMenuOpen = true;
+  fromMenu.hidden = false;
+  fromTrigger.setAttribute("aria-expanded", "true");
+  fromSearch.value = "";
+  buildFromList("");
+  fromSearch.focus();
+  const selected = fromList.querySelector('.unit-option[aria-selected="true"]');
+  if (selected) selected.scrollIntoView({ block: "nearest" });
+}
+
+function closeFromMenu(focusTrigger) {
+  if (!fromMenuOpen) return;
+  fromMenuOpen = false;
+  fromMenu.hidden = true;
+  fromTrigger.setAttribute("aria-expanded", "false");
+  if (focusTrigger) fromTrigger.focus();
+}
+
+/* ============================================================
+   TO DROPDOWN — only compatible units
+   ============================================================ */
+
+function buildToOptions(fromUnit, preferredUnit) {
+  const units = getCompatibleUnits(fromUnit);
+  const localCounts = {};
+  for (const unit of units) {
+    localCounts[unit.label] = (localCounts[unit.label] || 0) + 1;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  for (const unit of units) {
+    const option = document.createElement("option");
+    option.value = unit.key;
+    option.textContent = localCounts[unit.label] > 1
+      ? unit.label + " — " + unit.categoryLabel
+      : unit.label;
+    fragment.appendChild(option);
+  }
+
+  toSelect.replaceChildren(fragment);
+
+  if (preferredUnit && UNIT_BY_KEY.has(preferredUnit.key)) {
+    toSelect.value = preferredUnit.key;
+  } else if (toSelect.options.length > 0) {
+    toSelect.selectedIndex = 0;
+  }
+}
+
+function setFromUnit(unit) {
+  if (!unit) return;
+  state.from = unit;
+  fromSymbol.textContent = unit.label;
+  fromCategory.textContent = unit.categoryLabel;
+
+  const partner = pickDefaultPartner(unit);
+  state.to = partner;
+  buildToOptions(unit, partner);
+
+  updateExtraFields();
+  updateResult();
+  updateMeta();
+}
+
+/* ============================================================
+   CONVERSION
+   ============================================================ */
+
+function readNumber(el) {
+  const raw = el.value.trim();
+  if (raw === "") return NaN;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : NaN;
+}
+
+function getPatmKpa() {
+  const value = readNumber(patmVal);
+  if (!Number.isFinite(value)) return NaN;
+  if (patmUnit.value === "bar") return value * 100;
+  if (patmUnit.value === "psi") return value * PSI_KPA;
+  return value; // kPa
+}
+
+function convertValue(value, fromUnit, toUnit) {
+  if (!fromUnit || !toUnit || !Number.isFinite(value)) return NaN;
+  if (fromUnit.key === toUnit.key) return value;
+
+  if (fromUnit.type === "linear" && toUnit.type === "linear") {
+    return value * fromUnit.factor / toUnit.factor;
+  }
+
+  if (fromUnit.type === "special" && toUnit.type === "special" &&
+      fromUnit.specialKey === toUnit.specialKey) {
+    const spec = SPECIAL_UNITS[fromUnit.specialKey];
+    if (!spec || !spec.convert) return NaN;
+
+    // Each formula gets exactly the extra data it needs.
+    switch (fromUnit.specialKey) {
+      case "gauge_abs":
+        return spec.convert(value, fromUnit.id, toUnit.id, getPatmKpa());
+      case "mgm3_ppm":
+        return spec.convert(value, fromUnit.id, toUnit.id, readNumber(molarMass));
+      case "wt_mol":
+        return spec.convert(value, fromUnit.id, toUnit.id, readNumber(m1Val), readNumber(m2Val));
+      case "dyn_kin":
+        return spec.convert(value, fromUnit.id, toUnit.id, readNumber(rhoVal));
+      default:
+        return spec.convert(value, fromUnit.id, toUnit.id);
+    }
+  }
+
+  return NaN;
+}
+
+function formatNumber(val) {
+  if (!Number.isFinite(val)) return "—";
+  if (Object.is(val, -0)) val = 0;
+  const abs = Math.abs(val);
+  if (abs !== 0 && (abs < 1e-6 || abs >= 1e12)) {
+    return val.toExponential(6).replace(/\.?0+e/, "e");
+  }
+  return numberFormatter.format(val);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+
+function updateResult() {
+  const converted = convertValue(readNumber(inputEl), state.from, state.to);
+  resultUnitEl.textContent = state.to ? state.to.label : "";
+
+  if (!Number.isFinite(converted)) {
+    resultEl.textContent = "—";
+    resultEl.classList.add("empty");
+    return;
+  }
+
+  resultEl.textContent = formatNumber(converted);
+  resultEl.classList.remove("empty");
+}
+
+function updateMeta() {
+  metaInfo.textContent = state.from && state.to
+    ? state.from.categoryLabel + " · " + getCompatibleUnits(state.from).length + " compatible units"
+    : "";
+}
+
+function isDynamic(unit) {
+  return !!unit && unit.specialKey === "dyn_kin" &&
+    ["pas", "mpas", "cp", "p"].indexOf(unit.id) !== -1;
+}
+
+function isKinematic(unit) {
+  return !!unit && unit.specialKey === "dyn_kin" &&
+    ["m2s", "mm2s", "cst", "st"].indexOf(unit.id) !== -1;
+}
+
+function updateExtraFields() {
+  const from = state.from;
+  const to = state.to;
+
+  // Gauge <-> absolute only needs P_atm when crossing the reference.
+  const fromGauge = !!from && from.id.indexOf("gauge_") === 0;
+  const toGauge = !!to && to.id.indexOf("gauge_") === 0;
+  const needsPatm = !!from && !!to &&
+    from.specialKey === "gauge_abs" && to.specialKey === "gauge_abs" &&
+    fromGauge !== toGauge;
+
+  // ppm <-> mg/m3 always needs a molar mass.
+  const needsMolar = !!from && !!to &&
+    from.specialKey === "mgm3_ppm" && to.specialKey === "mgm3_ppm";
+
+  // wt% <-> mol% needs both molar masses.
+  const needsM1M2 = !!from && !!to &&
+    from.specialKey === "wt_mol" && to.specialKey === "wt_mol";
+
+  // Density is only needed when crossing dynamic <-> kinematic.
+  const needsRho = (isDynamic(from) && isKinematic(to)) ||
+                   (isKinematic(from) && isDynamic(to));
+
+  extraPatm.hidden = !needsPatm;
+  extraMolar.hidden = !needsMolar;
+  extraM1.hidden = !needsM1M2;
+  extraM2.hidden = !needsM1M2;
+  extraRho.hidden = !needsRho;
+
+  extraFields.classList.toggle(
+    "visible",
+    needsPatm || needsMolar || needsM1M2 || needsRho
+  );
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+
+fromTrigger.addEventListener("click", () => {
+  if (fromMenuOpen) closeFromMenu(true);
+  else openFromMenu();
+});
+
+fromSearch.addEventListener("input", () => buildFromList(fromSearch.value));
+
+fromSearch.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeFromMenu(true);
+    return;
+  }
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    const first = fromList.querySelector(".unit-option");
+    if (first) first.focus();
+    return;
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const first = fromList.querySelector(".unit-option");
+    if (first) first.click();
+  }
+});
+
+fromList.addEventListener("click", (event) => {
+  const option = event.target.closest(".unit-option");
+  if (!option) return;
+  const unit = findUnit(option.dataset.key);
+  if (!unit) return;
+  setFromUnit(unit);
+  closeFromMenu(true);
+});
+
+fromList.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeFromMenu(true);
+    return;
+  }
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+  event.preventDefault();
+  const options = Array.prototype.slice.call(fromList.querySelectorAll(".unit-option"));
+  const index = options.indexOf(document.activeElement);
+  if (index === -1) {
+    if (options[0]) options[0].focus();
+    return;
+  }
+  const next = event.key === "ArrowDown"
+    ? options[Math.min(index + 1, options.length - 1)]
+    : options[Math.max(index - 1, 0)];
+  if (next) next.focus();
+});
+
+document.addEventListener("click", (event) => {
+  if (!fromMenuOpen) return;
+  if (event.target.closest(".search-select")) return;
+  closeFromMenu(false);
+});
+
+toSelect.addEventListener("change", () => {
+  state.to = findUnit(toSelect.value);
+  updateExtraFields();
+  updateResult();
+  updateMeta();
+});
+
+inputEl.addEventListener("input", updateResult);
+
+[patmUnit, patmVal, molarMass, m1Val, m2Val, rhoVal].forEach((el) => {
+  el.addEventListener("input", updateResult);
+  el.addEventListener("change", updateResult);
+});
+
+swapBtn.addEventListener("click", () => {
+  if (!state.from || !state.to) return;
+
+  const previousResult = convertValue(readNumber(inputEl), state.from, state.to);
+  const nextFrom = state.to;
+  const nextTo = state.from;
+
+  if (Number.isFinite(previousResult)) {
+    inputEl.value = String(Number(previousResult.toPrecision(12)));
+  }
+
+  state.from = nextFrom;
+  fromSymbol.textContent = nextFrom.label;
+  fromCategory.textContent = nextFrom.categoryLabel;
+  buildToOptions(nextFrom, nextTo);
+  toSelect.value = nextTo.key;
+  state.to = nextTo;
+
+  updateExtraFields();
+  updateResult();
+  updateMeta();
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+
+function init() {
+  const initialFrom = findUnit("pressure:bar") || ALL_UNITS[0];
+  const initialTo = findUnit("pressure:psi") || pickDefaultPartner(initialFrom);
+
+  state.from = initialFrom;
+  state.to = initialTo;
+  fromSymbol.textContent = initialFrom.label;
+  fromCategory.textContent = initialFrom.categoryLabel;
+
+  buildToOptions(initialFrom, initialTo);
+  toSelect.value = initialTo.key;
+  buildFromList("");
+
+  updateExtraFields();
+  updateResult();
+  updateMeta();
+}
+
+init();
+
+/* ============================================================
+   SELF-TEST (console) — the six requested checks
+   ============================================================ */
+
+function runSelfTest() {
+  const checks = [];
+
+  function test(label, actual, expected, tolerance) {
+    const pass = Number.isFinite(actual) &&
+      Math.abs(actual - expected) <= (tolerance || 1e-4);
+    checks.push({
+      check: label,
+      actual: Number.isFinite(actual) ? Number(actual.toPrecision(8)) : String(actual),
+      expected: expected,
+      pass: pass
+    });
+  }
+
+  const bar = findUnit("pressure:bar");
+  const psi = findUnit("pressure:psi");
+  const cp = findUnit("dyn_kin:cp");
+  const mpas = findUnit("dyn_kin:mpas");
+  const celsius = findUnit("temperature:c");
+  const fahrenheit = findUnit("temperature:f");
+  const api = findUnit("api_sg_density:api");
+  const sg = findUnit("api_sg_density:sg");
+  const bbl = findUnit("volume:bbl");
+  const litre = findUnit("volume:l");
+
+  test("1 bar = 14.5038 psi", convertValue(1, bar, psi), 14.5038, 1e-4);
+  test("1 cP = 1 mPa·s", convertValue(1, cp, mpas), 1, 1e-9);
+  test("0 °C = 32 °F", convertValue(0, celsius, fahrenheit), 32, 1e-9);
+  test("100 °C = 212 °F", convertValue(100, celsius, fahrenheit), 212, 1e-9);
+  test("10 °API = 1.000 SG", convertValue(10, api, sg), 1, 1e-9);
+  test("1 bbl = 158.987 L", convertValue(1, bbl, litre), 158.987, 1e-3);
+
+  const passed = checks.filter((check) => check.pass).length;
+
+  console.group("Unit converter self-test");
+  console.table(checks);
+  console.log("Self-test: " + passed + "/" + checks.length + " checks passed");
+  if (passed !== checks.length) {
+    console.error("Self-test failures:", checks.filter((check) => !check.pass));
+  }
+  console.groupEnd();
+
+  return checks;
+}
+
+runSelfTest();
+
+  </script>
+</body>
+</html>
